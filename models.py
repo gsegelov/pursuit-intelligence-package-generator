@@ -63,6 +63,11 @@ class ComplianceRow(BaseModel):
     coverage_status: str        # "COVERED" / "PARTIAL" / "GAP"
     notes: str                  # Explanation for PARTIAL or GAP status
 
+class ResponseArchitectOutput(BaseModel):
+    """Wrapper model for ResponseArchitect output — holds both the outline and compliance matrix."""
+    response_outline: List[ResponseSection]     # Section-by-section structure
+    compliance_matrix: List[ComplianceRow]
+
 class PursuitIntelligencePackage(BaseModel):
     """The complete output of the pipeline — all agents' work assembled into one package"""
     rfp_metadata: RFPMetadata                   # Parsed RFP metadata
