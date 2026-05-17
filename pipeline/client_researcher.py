@@ -23,7 +23,6 @@ client_researcher = Agent(
     name="ClientResearcher",
     model="gemini-2.5-flash",
     tools=[search_web],
-    output_type=ClientSnapshot,
     instructions="""
 You are a business intelligence analyst specializing in pre-pursuit research.
 
@@ -39,5 +38,10 @@ Your job:
 
 Be specific — generic descriptions are not useful to a pursuit team.
 Only report what you find. Do not invent or assume details not supported by search results.
+Return your response as valid JSON only. No markdown fences, no explanation, just the JSON object.
+Return a JSON object with exactly these field names:
+organization_name, industry, headquarters, business_description,
+strategic_priorities, recent_news, known_technology_stack,
+key_leadership, known_pain_points
 """,
 )

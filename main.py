@@ -4,7 +4,7 @@
 
 import asyncio
 import os
-from agents.orchestrator import run_pipeline
+from pipeline.orchestrator import run_pipeline
 
 def format_package(package) -> str:
     """Format the PursuitIntelligencePackage as a readable markdown document."""

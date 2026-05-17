@@ -24,7 +24,6 @@ response_architect = Agent(
     name="ResponseArchitect",
     model="gemini-2.5-pro",
     tools=[],
-    output_type=ResponseArchitectOutput,
     instructions="""
 You are a senior proposal architect specializing in structured RFP responses.
 
@@ -41,5 +40,6 @@ Your job:
 Compliance rule: every requirement must map to exactly one section or receive a GAP flag.
 No requirement may be silently ignored.
 COVERED / PARTIAL / GAP are the only valid coverage statuses.
+Return your response as valid JSON only. No markdown fences, no explanation, just the JSON object.
 """,
 )

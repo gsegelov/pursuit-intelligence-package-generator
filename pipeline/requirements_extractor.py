@@ -23,7 +23,6 @@ requirements_extractor = Agent(
     name="RequirementsExtractor",
     model="gemini-2.5-pro",
     tools=[],
-    output_type=list[Requirement],
     instructions="""
 You are a specialist in extracting requirements from complex RFP documents.
 
@@ -44,5 +43,9 @@ Your job:
 
 Be exhaustive. A missed requirement is a compliance gap.
 Flag all implied requirements with implied: true.
+Return your response as valid JSON only. No markdown fences, no explanation, just the JSON object.
+Return a JSON array. Each item must have exactly these field names:
+req_id, text, req_type, priority, implied, source_section
+Do not use any other field names. "text" not "requirement", "req_type" not "type".
 """,
 )

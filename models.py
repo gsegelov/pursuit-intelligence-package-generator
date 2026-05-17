@@ -4,18 +4,18 @@
 # Build and verify this file before writing any agent
 
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class RFPMetadata(BaseModel):
     """Structured metadata extracted from the RFP document by RFPParser."""
-    client_name: str                    # Name of the issuing organization
-    contract_value: str                 # Stated value or "Not Specified"
-    submission_deadline: str            # Submission due date
-    contract_duration: str              # Length of the engagement
-    evaluation_criteria: List[str]      # How responses will be scored
-    submission_requirements: List[str]  # Format/process requirements
-    industry_sector: str                # Client's industry
-    project_scope_summary: str          # 2-3 sentence summary of what is being procured
+    client_name: str                            # Name of the issuing organization
+    contract_value: str                         # Stated value or "Not Specified"
+    submission_deadline: str                    # Submission due date
+    contract_duration: str                      # Length of the engagement
+    evaluation_criteria: List[str] = []         # How responses will be scored
+    submission_requirements: List[str] = []     # Format/process requirements
+    industry_sector: str                        # Client's industry
+    project_scope_summary: str                  # 2-3 sentence summary of what is being procured
 
 class Requirement(BaseModel):
     """A single extracted requirement from the RFP, stated or implied."""

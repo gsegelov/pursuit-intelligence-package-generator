@@ -23,7 +23,6 @@ rfp_parser = Agent(
     name="RFPParser",
     model="gemini-2.5-flash",
     tools=[extract_pdf_text],
-    output_type=RFPMetadata,
     instructions="""
 You are a specialist in analyzing government and enterprise RFP documents.
 
@@ -41,5 +40,9 @@ Your job:
 
 Return a structured RFPMetadata object. If a field cannot be found, return "Not specified".
 Never guess or hallucinate values — only extract what is explicitly stated in the document.
+Return your response as valid JSON only. No markdown fences, no explanation, just the JSON object.
+Return a JSON object with EXACTLY these field names, no others:
+client_name, contract_value, submission_deadline, contract_duration,
+evaluation_criteria, submission_requirements, industry_sector, project_scope_summary
 """,
 )

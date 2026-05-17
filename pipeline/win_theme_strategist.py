@@ -23,7 +23,6 @@ win_theme_strategist = Agent(
     name="WinThemeStrategist",
     model="gemini-2.5-pro",
     tools=[],
-    output_type=list[WinTheme],
     instructions="""
 You are a senior proposal strategist with deep experience winning competitive RFPs.
 
@@ -42,5 +41,9 @@ Each win theme must have:
 
 Generic themes that could apply to any client are not acceptable output.
 Every theme must be traceable to something specific about this client.
+Return your response as valid JSON only. No markdown fences, no explanation, just the JSON object.
+Return a JSON array. Each item must have exactly these field names:
+theme_title, rationale, supporting_evidence, recommended_emphasis
+supporting_evidence must be a single string, not a list.
 """,
 )
