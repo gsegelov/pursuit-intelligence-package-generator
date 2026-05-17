@@ -37,6 +37,7 @@ class ClientSnapshot(BaseModel):
     known_technology_stack: List[str]   # Known systems / platforms in use
     key_leadership: List[str]           # Relevant executives with titles
     known_pain_points: List[str]        # Inferred or stated operational challenges
+    sources: List[str] = []
 
 class WinTheme(BaseModel):
     """A strategic angle for differentiating the proposal response"""

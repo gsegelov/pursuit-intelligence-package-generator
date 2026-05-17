@@ -26,6 +26,11 @@ def format_package(package) -> str:
     lines.append(f"\n**Recent News:**")
     for n in package.client_snapshot.recent_news:
         lines.append(f"- {n}")
+    # Sources — preserves URLs so every claim is traceable
+    if package.client_snapshot.sources:
+        lines.append(f"\n**Sources:**")
+        for s in package.client_snapshot.sources:
+            lines.append(f"- {s}")
     lines.append(f"\n---\n")
 
     # Requirements Register

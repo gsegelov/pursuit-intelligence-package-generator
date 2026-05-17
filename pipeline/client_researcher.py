@@ -42,6 +42,8 @@ Return your response as valid JSON only. No markdown fences, no explanation, jus
 Return a JSON object with exactly these field names:
 organization_name, industry, headquarters, business_description,
 strategic_priorities, recent_news, known_technology_stack,
-key_leadership, known_pain_points
+key_leadership, known_pain_points.
+Include a "sources" field in your JSON output: a list of URLs from the search results
+that support your findings. Include at least 3 URLs.
 """,
 )
