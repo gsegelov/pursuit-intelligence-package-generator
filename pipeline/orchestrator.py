@@ -4,12 +4,13 @@
 # and assembles the final PursuitIntelligencePackage.
 
 import os
+import json
+import pypdf
+from datetime import datetime
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
-from agents import Agent, Runner, set_default_openai_client, set_tracing_disabled, set_default_openai_api
-from datetime import datetime
-import json
 from pydantic import ValidationError
+from agents import Runner, set_default_openai_client, set_tracing_disabled, set_default_openai_api
 
 from pipeline.rfp_parser import rfp_parser
 from pipeline.requirements_extractor import requirements_extractor
@@ -22,23 +23,14 @@ from models import (
     ClientSnapshot, WinTheme, ResponseArchitectOutput
 )
 
-# Load API key from .env
+# ── Gemini setup — configured once here, workers import only Agent ──────────
 load_dotenv()
-
-# Point the AsyncOpenAI client at Google's Gemini endpoint
-client = AsyncOpenAI(
+set_default_openai_client(AsyncOpenAI(
     api_key=os.getenv("GOOGLE_API_KEY"),
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-)
-
-# Tell the Agents SDK to use our Gemini-configured client
-set_default_openai_client(client)
-
-# Force Chat Completions API — Gemini doesn't support the Responses API
-set_default_openai_api("chat_completions")
-
-# Disable tracing — we don't have an OpenAI key for the trace exporter
-set_tracing_disabled(True)
+))
+set_default_openai_api("chat_completions")  # Gemini doesn't support Responses API
+set_tracing_disabled(True)                  # No OpenAI key for trace exporter
 
 
 async def run_pipeline(pdf_path: str) -> PursuitIntelligencePackage:
@@ -80,7 +72,6 @@ async def run_pipeline(pdf_path: str) -> PursuitIntelligencePackage:
         ]:
             if alt in data and canonical not in data:
                 data[canonical] = data.pop(alt)
-        # Ensure list fields are actually lists
         for field in ["evaluation_criteria", "submission_requirements"]:
             if field in data and isinstance(data[field], str):
                 data[field] = [data[field]]
@@ -113,7 +104,6 @@ async def run_pipeline(pdf_path: str) -> PursuitIntelligencePackage:
         ]:
             if alt in data and canonical not in data:
                 data[canonical] = data.pop(alt)
-        # Ensure list fields are actually lists
         for field in ["strategic_priorities", "recent_news", "known_technology_stack",
                       "key_leadership", "known_pain_points"]:
             if field in data and isinstance(data[field], str):
@@ -125,17 +115,17 @@ async def run_pipeline(pdf_path: str) -> PursuitIntelligencePackage:
     def parse_list(model_class, raw: str):
         """Parse raw agent output into a list of Pydantic models."""
         data = strip_fences(raw)
-        # Unwrap if agent returned {"requirements": [...]}
         if isinstance(data, dict):
             data = list(data.values())[0]
         remapped = []
         for item in data:
-            # Requirement remapping
+            # Guard: skip malformed items that aren't dicts
+            if not isinstance(item, dict):
+                continue
             if "requirement" in item and "text" not in item:
                 item["text"] = item.pop("requirement")
             if "type" in item and "req_type" not in item:
                 item["req_type"] = item.pop("type")
-            # WinTheme remapping
             if "title" in item and "theme_title" not in item:
                 item["theme_title"] = item.pop("title")
             if "emphasis" in item and "recommended_emphasis" not in item:
@@ -146,10 +136,8 @@ async def run_pipeline(pdf_path: str) -> PursuitIntelligencePackage:
                 item["recommended_emphasis"] = item.pop("how_to_emphasize")
             if "evidence" in item and "supporting_evidence" not in item:
                 item["supporting_evidence"] = item.pop("evidence")
-            # Convert supporting_evidence to string if it came back as a list
             if "supporting_evidence" in item and isinstance(item["supporting_evidence"], list):
                 item["supporting_evidence"] = " ".join(item["supporting_evidence"])
-            # ResponseSection remapping
             if "section" in item and "section_title" not in item:
                 item["section_title"] = item.pop("section")
             remapped.append(item)
@@ -158,7 +146,6 @@ async def run_pipeline(pdf_path: str) -> PursuitIntelligencePackage:
     def parse_architect(raw: str) -> ResponseArchitectOutput:
         """Parse raw agent output into ResponseArchitectOutput."""
         data = strip_fences(raw)
-        # Remap response_outline field name variations
         if "response_outline" in data:
             for section in data["response_outline"]:
                 if "section_id" in section and "section_number" not in section:
@@ -172,11 +159,20 @@ async def run_pipeline(pdf_path: str) -> PursuitIntelligencePackage:
                     section["estimated_pages"] = str(section.pop("pages"))
                 if "page_count" in section and "estimated_pages" not in section:
                     section["estimated_pages"] = f"{section.pop('page_count')} pages"
-                # Ensure list fields exist
                 for field in ["requirements_addressed", "win_themes_applied"]:
                     if field not in section:
                         section[field] = []
-        # Remap compliance_matrix field name variations
+                # Default missing required fields
+                if "purpose" not in section:
+                    section["purpose"] = section.get("description", "")
+                if "recommended_angle" not in section:
+                    section["recommended_angle"] = section.get("angle", section.get("approach", ""))
+                if "estimated_pages" not in section:
+                    section["estimated_pages"] = section.get("page_estimate", "1-2 pages")
+                if "section_number" not in section:
+                    section["section_number"] = 0
+                if "section_title" not in section:
+                    section["section_title"] = section.get("title", "Untitled")
         if "compliance_matrix" in data:
             for row in data["compliance_matrix"]:
                 if "text" in row and "requirement_text" not in row:
@@ -191,13 +187,23 @@ async def run_pipeline(pdf_path: str) -> PursuitIntelligencePackage:
                     row["addressed_in_section"] = row.pop("section_id")
                 if "status" in row and "coverage_status" not in row:
                     row["coverage_status"] = row.pop("status")
-                # Ensure notes field exists
                 if "notes" not in row:
                     row["notes"] = ""
-                # Ensure addressed_in_section exists
                 if "addressed_in_section" not in row:
                     row["addressed_in_section"] = "—"
+                # Default missing required fields
+                if "requirement_text" not in row:
+                    row["requirement_text"] = row.get("description", row.get("req_text", ""))
+                if "coverage_status" not in row:
+                    row["coverage_status"] = "COVERED"
         return ResponseArchitectOutput.model_validate(data)
+
+    # Step 0 — Extract full RFP text once, share across all agents that need it
+    reader = pypdf.PdfReader(pdf_path)
+    raw_rfp_text = "\n\n".join(
+        page.extract_text() for page in reader.pages
+        if page.extract_text()
+    )
 
     # Step 1 — Parse the RFP and extract metadata
     print("Step 1/5 — Parsing RFP...")
@@ -205,8 +211,13 @@ async def run_pipeline(pdf_path: str) -> PursuitIntelligencePackage:
     metadata = parse_metadata(metadata_result.final_output)
 
     # Step 2 — Extract all requirements from the full RFP text
+    # FIX: pass actual document text, not just the file path
     print("Step 2/5 — Extracting requirements...")
-    requirements_input = f"RFP File: {pdf_path}\nClient: {metadata.client_name}\nScope: {metadata.project_scope_summary}"
+    requirements_input = (
+        f"CLIENT: {metadata.client_name}\n"
+        f"SCOPE: {metadata.project_scope_summary}\n\n"
+        f"FULL RFP TEXT:\n{raw_rfp_text}"
+    )
     requirements_result = await Runner.run(requirements_extractor, requirements_input)
     requirements = parse_list(Requirement, requirements_result.final_output)
 
@@ -218,13 +229,20 @@ async def run_pipeline(pdf_path: str) -> PursuitIntelligencePackage:
 
     # Step 4 — Generate win themes from client intel and evaluation criteria
     print("Step 4/5 — Generating win themes...")
-    strategy_input = f"Client Snapshot: {client_snapshot.model_dump_json()}\nEvaluation Criteria: {metadata.evaluation_criteria}"
+    strategy_input = (
+        f"Client Snapshot: {client_snapshot.model_dump_json()}\n"
+        f"Evaluation Criteria: {metadata.evaluation_criteria}"
+    )
     strategy_result = await Runner.run(win_theme_strategist, strategy_input)
     win_themes = parse_list(WinTheme, strategy_result.final_output)
 
     # Step 5 — Design response structure and build compliance matrix
     print("Step 5/5 — Designing response structure...")
-    architect_input = f"Requirements: {[r.model_dump_json() for r in requirements]}\nWin Themes: {[t.model_dump_json() for t in win_themes]}\nMetadata: {metadata.model_dump_json()}"
+    architect_input = (
+        f"Requirements: {[r.model_dump_json() for r in requirements]}\n"
+        f"Win Themes: {[t.model_dump_json() for t in win_themes]}\n"
+        f"Metadata: {metadata.model_dump_json()}"
+    )
     architect_result = await Runner.run(response_architect, architect_input)
     architect_output = parse_architect(architect_result.final_output)
 
