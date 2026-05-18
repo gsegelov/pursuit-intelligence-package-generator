@@ -1,7 +1,7 @@
 # agents/response_architect.py
 # ResponseArchitect agent- designs the complete response structure and
 # builds the compliance matrix. The final worker in the pipeline.
-# REcieves List[Requirement] +List[WinTheme] + RFP Metadata.
+# Recieves List[Requirement] +List[WinTheme] + RFP Metadata.
 # Returns ResponseArchitectOutput (outline + compliance matrix)
 
 import os

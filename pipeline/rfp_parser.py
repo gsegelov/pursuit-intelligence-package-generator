@@ -1,5 +1,5 @@
 # agents/rfp_parser.py
-# RFPParser agent - extracts structure metadata from raw RFP text
+# RFPParser agent - extracts structured metadata from raw RFP text
 # First worker on the pipeline. Receives raw PDF text, returns RFPMetadata
 
 import os

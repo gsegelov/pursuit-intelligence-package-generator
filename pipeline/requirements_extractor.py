@@ -1,7 +1,7 @@
 # agents/requirements_extractor.py
 # Requirementsextractor agent - reads the full RFP and extracts every
 # stated AND implied requirement into a structured register
-# Recieves full RFP text + RFPMetadata summary. Returns List[Requirement]
+# Receives full RFP text + RFPMetadata summary. Returns List[Requirement]
 
 import os
 from dotenv import load_dotenv

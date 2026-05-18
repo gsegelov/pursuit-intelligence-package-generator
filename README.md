@@ -94,7 +94,11 @@ When prompted, enter the path to your RFP PDF. The pipeline runs in approximatel
 
 **Why no HITL in v1?** The natural insertion point is after WinThemeStrategist — a pursuit lead would logically review win themes before the response structure is built around them. Implemented in v1.1 as an approval gate.
 
-**Why manual JSON parsing instead of output_type?** The OpenAI Agents SDK uses the Responses API by default, which Gemini's OpenAI-compatible endpoint does not support. Switching to Chat Completions mode (`set_default_openai_api("chat_completions")`) and parsing structured JSON output manually resolves this — and reflects a pattern common in production agentic systems where output validation cannot be delegated to the framework.
+**Why manual JSON parsing instead of output_type?** The OpenAI Agents SDK defaults to the Responses API for structured output. Gemini's OpenAI-compatible endpoint does not support the Responses API — only Chat Completions. Switching to `set_default_openai_api("chat_completions")` resolves the 404 errors, but requires parsing structured JSON output manually and validating with Pydantic. This is actually the more production-realistic pattern: in real agentic systems, output validation cannot always be delegated to the framework, and building explicit JSON parsing with field remapping makes the data contracts more transparent and debuggable.
+
+**Why pass full RFP text to RequirementsExtractor instead of using the tool?** The orchestrator already extracts the PDF text for RFPParser. Passing that text directly to RequirementsExtractor — rather than giving the agent its own PDF tool — avoids a redundant file read and ensures both agents work from identical source material. The orchestrator owns data flow; agents own analysis.
+
+**Why centralize Gemini setup in the orchestrator?** Worker agent files define `Agent` objects only — they don't run anything. Only the orchestrator calls `Runner.run()`, so only the orchestrator needs the SDK configuration. This keeps setup in one place and makes it easier to swap models or endpoints in future.
 
 ## Roadmap
 
